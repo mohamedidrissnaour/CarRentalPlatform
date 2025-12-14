@@ -1,140 +1,181 @@
 package net.naour.rentalservice.services;
 
 
+import jakarta.transaction.Transactional;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import net.naour.rentalservice.dto.Car;
-import net.naour.rentalservice.dto.PaymentRequest;
-import net.naour.rentalservice.dto.PaymentResponse;
-import net.naour.rentalservice.dto.RentalRequest;
+import net.naour.rentalservice.dto.Client;
+import net.naour.rentalservice.dto.RentalDTO;
 import net.naour.rentalservice.entities.Rental;
-import net.naour.rentalservice.entities.RentalStatus;
+import net.naour.rentalservice.entities.StatutReservation;
 import net.naour.rentalservice.feign.CarRestClient;
+import net.naour.rentalservice.feign.ClientRestClient;
 import net.naour.rentalservice.repository.RentalRepository;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
-import java.time.temporal.ChronoUnit;
-import java.util.List;
+import java.time.LocalDate;
+import java.util.*;
+import java.util.stream.Collectors;
 
 @Service
+@RequiredArgsConstructor
+@Slf4j //@Slf4j est une annotation fournie par Lombok pour générer automatiquement un logger dans ta classe.
 public class RentalService {
-
     private final RentalRepository rentalRepository;
     private final CarRestClient carRestClient;
+    private final ClientRestClient clientRestClient;
+
+    public List<Rental> getAllReservations() {
+        return rentalRepository.findAll();
+    }
+
+    public Optional<Rental> getReservationById(Long id) {
+        return rentalRepository.findById(id);
+    }
+
+    public List<Rental> getReservationsByClientId(Long clientId) {
+        return rentalRepository.findByClientId(clientId);
+    }
+
+    public List<Rental> getReservationsByCarId(Long carId) {
+        return rentalRepository.findByCarId(carId);
+    }
+
+    public List<Rental> getReservationsByStatut(StatutReservation statut) {
+        return rentalRepository.findByStatut(statut);
+    }
+
+    public List<Rental> getReservationsBetweenDates(LocalDate startDate, LocalDate endDate) {
+        return rentalRepository.findReservationsBetweenDates(startDate, endDate);
+    }
+
+    public List<Rental> getActiveReservations() {
+        return rentalRepository.findActiveReservations(LocalDate.now());
+    }
 
 
-    public RentalService(RentalRepository rentalRepository, CarRestClient carRestClient) {
-        this.rentalRepository = rentalRepository;
-        this.carRestClient = carRestClient;
+    @Transactional //@Transactional est une annotation de Spring (ou JPA)
+    // qui sert à gérer les transactions sur la base de données , en cas dechoue ROllback.
+    public Rental createReservation(Rental rental) {
+        log.info("Création d'une réservation pour le client {} et la voiture {}",
+                rental.getClientId(), rental.getCarId());
+
+        // 3. Vérifier que la voiture existe et est disponible
+        Car car = carRestClient.getCarById(rental.getCarId());
+        if (car == null || !car.isDisponible()) {
+            throw new RuntimeException("La voiture n'est pas disponible");
+        }
+
+
+        // 4. Calculer le montant total
+        long nombreJours = rental.getNombreJours();
+        if (nombreJours <= 0) {
+            nombreJours = 1;
+        }
+        double montant = nombreJours * car.getPricePerDay();
+        rental.setMontantTotal(Math.round(montant * 100.0) / 100.0);
+
+        log.info("Montant calculé: {} EUR pour {} jour(s)", rental.getMontantTotal(), nombreJours);
+
+        // 5. Sauvegarder la réservation
+        Rental savedReservation = rentalRepository.save(rental);
+
+        // 6. Marquer la voiture comme non disponible
+        try {
+            carRestClient.updateAvailability(rental.getCarId(), false);
+            log.info("Voiture {} marquée comme non disponible", rental.getCarId());
+        } catch (Exception e) {
+            log.error("Erreur lors de la mise à jour de la disponibilité: {}", e.getMessage());
+        }
+
+        return savedReservation;
+
+        }
+
+    @Transactional
+    public Rental updateReservationStatut(Long id, StatutReservation statut) {
+        Rental reservation = rentalRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Réservation non trouvée avec l'ID: " + id));
+
+        log.info("Changement de statut de la réservation {} : {} -> {}",
+                id, reservation.getStatut(), statut);
+
+        // Si annulation ou terminée, remettre la voiture disponible
+        if (statut == StatutReservation.ANNULEE || statut == StatutReservation.TERMINEE) {
+            try {
+                carRestClient.updateAvailability(reservation.getCarId(), true);
+                log.info("Voiture {} remise disponible", reservation.getCarId());
+            } catch (Exception e) {
+                log.error("Erreur lors de la remise à disponible: {}", e.getMessage());
+            }
+        }
+
+        reservation.setStatut(statut);
+        return rentalRepository.save(reservation);
     }
 
 
     @Transactional
-    public Rental createRental(RentalRequest request) {
-        // Date validations are now handled by @ValidDateRange and @FutureOrPresent annotations
+    public void deleteReservation(Long id) {
+        Rental reservation = rentalRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Réservation non trouvée avec l'ID: " + id));
 
-        // Check car availability via FeignClient
-        ResponseEntity<Car> carResponse = carRestClient.findCarById(request.getCarId());
-
-        if (carResponse.getStatusCode() != HttpStatus.OK || carResponse.getBody() == null) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND,
-                    "Car not found with ID: " + request.getCarId());
-        }
-
-        Car car = carResponse.getBody();
-
-        // Check if car is available
-        if (!"AVAILABLE".equalsIgnoreCase(car.getStatus())) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Car is not available for rental");
-        }
-
-        // Check for overlapping rentals
-        List<Rental> overlappingRentals = rentalRepository
-                .findActiveRentalsForCarInDateRange(
-                        request.getCarId(),
-                        request.getStartDate(),
-                        request.getEndDate()
-                );
-
-        if (!overlappingRentals.isEmpty()) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
-                    "Car is already rented for the requested dates");
-        }
-
-        // Calculate total amount
-        long days = ChronoUnit.DAYS.between(request.getStartDate(), request.getEndDate()) + 1;
-        Double totalAmount = car.getPricePerDay() * days;
-
-        // Process payment via WebClient
-        PaymentRequest paymentRequest = new PaymentRequest(
-                "stripe", // Default payment method
-                totalAmount,
-                request.getClientId(),
-                String.format("Rental for car %d (%s %s)", car.getId(), car.getBrand(), car.getModel())
-        );
-
+        // Remettre la voiture disponible
         try {
-            PaymentResponse paymentResponse = paymentServiceClient.processPayment(paymentRequest)
-                    .block(); // Blocking call for synchronous processing
-
-            if (paymentResponse == null || !"SUCCESS".equalsIgnoreCase(paymentResponse.getStatus())) {
-                throw new ResponseStatusException(HttpStatus.PAYMENT_REQUIRED,
-                        "Payment processing failed: " + (paymentResponse != null ? paymentResponse.getMessage() : "Unknown error"));
-            }
-
-            // Create rental
-            Rental rental = new Rental();
-            rental.setCar(request.getCarId());
-            rental.setClientId(request.getClientId());
-            rental.setStartDate(request.getStartDate());
-            rental.setEndDate(request.getEndDate());
-            rental.setStatus(RentalStatus.ACTIVE);
-            rental.setPaymentId(paymentResponse.getPaymentId());
-            rental.setTotalAmount(totalAmount);
-
-            Rental savedRental = rentalRepository.save(rental);
-
-            // Update car status to RENTED
-            car.setStatus("RENTED");
-            // Set ID explicitly as it might be null in the response from Spring Data REST
-            car.setId(request.getCarId());
-            carRestClient.updateCar(request.getCarId(), car);
-
-            return savedRental;
-
-        } catch (ResponseStatusException e) {
-            throw e;
+            carRestClient.updateAvailability(reservation.getCarId(), true);
+            log.info("Voiture {} remise disponible après suppression", reservation.getCarId());
         } catch (Exception e) {
-            throw new ResponseStatusException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error processing payment: " + e.getMessage(), e);
+            log.error("Erreur lors de la remise à disponible: {}", e.getMessage());
         }
-    }
 
-    /**
-     * Get all rentals.
-     */
-    public List<Rental> getAllRentals() {
-        return rentalRepository.findAll();
-    }
-
-    /**
-     * Get rental by ID.
-     */
-    public Rental getRentalById(Long id) {
-        return rentalRepository.findById(id)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND,
-                        "Rental not found with ID: " + id));
+        rentalRepository.deleteById(id);
     }
 
 
-    /**
-     * Get rentals by car ID.
-     */
-    public List<Rental> getRentalsByCarId(Long carId) {
-        return rentalRepository.findByCarId(carId);
+    public boolean isCarAvailable(Long carId, LocalDate dateDebut, LocalDate dateFin) {
+        List<Rental> conflits = rentalRepository.findConflictingReservations(
+                carId, dateDebut, dateFin
+        );
+        return conflits.isEmpty();
+    }
+
+
+    public RentalDTO getReservationDetails(Long id) {
+        Rental rental = rentalRepository.findById(id)
+                .orElseThrow(() -> new RuntimeException("Réservation non trouvée"));
+
+        Client client = clientRestClient.getClientById(rental.getClientId());
+        Car car = carRestClient.getCarById(rental.getCarId());
+
+        return RentalDTO.builder()
+                .id(rental.getId())
+                .clientId(rental.getClientId())
+                .clientNom(client.getNom())
+                .clientPrenom(client.getPrenom())
+                .carId(rental.getCarId())
+                .carMarque(car.getMarque())
+                .carModele(car.getModele())
+                .dateDebut(rental.getStartDate())
+                .dateFin(rental.getEndDate())
+                .nombreJours(rental.getNombreJours())
+                .montantTotal(rental.getMontantTotal())
+                .statut(rental.getStatut())
+                .build();
+    }
+
+    public List<RentalDTO> getAllReservationsWithDetails() {
+        return rentalRepository.findAll().stream()
+                .map(reservation -> {
+                    try {
+                        return getReservationDetails(reservation.getId());
+                    } catch (Exception e) {
+                        log.error("Erreur lors de la récupération des détails: {}", e.getMessage());
+                        return null;
+                    }
+                })
+                .filter(dto -> dto != null)
+                .collect(Collectors.toList());
     }
 }
 

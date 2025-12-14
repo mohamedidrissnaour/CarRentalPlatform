@@ -31,9 +31,15 @@ public class Car {
     @Column(name = "car_year", nullable = false)
     private Integer year;
 
-    @Enumerated(EnumType.STRING)
+
     @Column(nullable = false)
-    private CarStatus status = CarStatus.AVAILABLE;
+    private boolean disponible;
+
+    @Column(nullable = false)
+    private Integer immatriculation;
+
+    @Column(nullable = false)
+    private String categorie;
 
 
 

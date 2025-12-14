@@ -1,14 +1,15 @@
 package net.naour.rentalservice.entities;
-
-
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
 import net.naour.rentalservice.dto.Car;
+import net.naour.rentalservice.dto.Client;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.temporal.ChronoUnit;
 
 @Entity
 @Data
@@ -22,30 +23,28 @@ public class Rental {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-
-    @Transient  //cette attribut est dans la classe mais auccun e relation avec la base de donnée
-    private Car car;
-
-
     @Column(name = "client_id", nullable = false)
-    private String clientId;
+    private Long clientId;
 
-
+    @Column(name = "car_id", nullable = false)
+    private Long carId;
     @Column(name = "start_date", nullable = false)
     private LocalDate startDate;
-
-
     @Column(name = "end_date", nullable = false)
     private LocalDate endDate;
-
+    @Column(name = "montant_total")
+    private double montantTotal;
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
-    private RentalStatus status = RentalStatus.ACTIVE;
+    private StatutReservation statut;
+    @Column(name = "created_at")
+    private LocalDateTime createdAt;
 
-    @Column(name = "payment_id")
-    private String paymentId;
-
-    @Column(name = "total_amount")
-    private Double totalAmount;
+    public long getNombreJours() {
+        if (startDate != null && endDate != null) {
+            return ChronoUnit.DAYS.between(startDate, endDate);
+        }
+        return 0;
+    }
 
 }

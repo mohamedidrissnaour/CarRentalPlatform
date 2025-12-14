@@ -1,7 +1,6 @@
 package net.naour.carservice.repository;
 
 import net.naour.carservice.entities.Car;
-import net.naour.carservice.entities.CarStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.query.Param;
 import org.springframework.data.rest.core.annotation.RepositoryRestResource;
@@ -14,10 +13,13 @@ import java.util.List;
 public interface CarRepository extends JpaRepository<Car, Long> {
 
 
-    @RestResource(path = "status", rel = "status")
-    List<Car> findByStatus(@Param("status") CarStatus status);
+    @RestResource(path = "disponible", rel = "disponible")
+    List<Car> findByDisponibleTrue();
 
     @RestResource(path = "brand", rel = "brand")
     List<Car> findByBrand(@Param("brand") String brand);
+
+    @RestResource(path = "category", rel = "category")
+    List<Car> findByCategorie(String categorie);
 }
 
