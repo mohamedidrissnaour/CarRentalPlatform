@@ -27,7 +27,7 @@ public class PaymentService {
     }
 
     public List<Payment> getPaymentsByReservation(Long reservationId) {
-        return paymentRepository.findByReservationId(reservationId);
+        return paymentRepository.findByRentalId(reservationId);
     }
 
     public List<Payment> getPaymentsByClient(Long clientId) {

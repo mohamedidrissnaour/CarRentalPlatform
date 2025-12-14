@@ -11,7 +11,8 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/cars")
 
-@CrossOrigin(origins = "*")
+
+@CrossOrigin(origins = "http://localhost:5173", allowCredentials = "true")
 public class CarController {
 
     private final CarService carService;
@@ -20,22 +21,22 @@ public class CarController {
         this.carService = carService;
     }
 
-    @GetMapping("/cars")
+    @GetMapping
     public List<Car> getAllCars() {
         return carService.getAllCars();
     }
 
-    @GetMapping("/cars/{id}")
+    @GetMapping("/{id}")
     public Car getCarById(@PathVariable Long id) {
         return carService.getCarById(id).orElseThrow();
     }
 
-    @GetMapping("/cars/available")
+    @GetMapping("/available")
     public List<Car> getAvailableCars() {
         return carService.getAvailableCars();
     }
 
-    @GetMapping("/cars/category/{categorie}")
+    @GetMapping("/category/{categorie}")
     public List<Car> getCarsByCategory(@PathVariable String categorie) {
         return carService.getCarsByCategory(categorie);
     }
@@ -51,7 +52,7 @@ public class CarController {
         return carService.updateCar(id ,car);
     }
 
-    @PatchMapping("/{id}/availability}")
+    @PatchMapping("/{id}/availability")
     public Car UpdateAvailability(@PathVariable Long id , @RequestParam boolean availability) {
         return carService.updateAvailability(id, availability);
     }

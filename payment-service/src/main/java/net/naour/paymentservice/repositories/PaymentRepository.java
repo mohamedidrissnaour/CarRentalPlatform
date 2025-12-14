@@ -15,7 +15,7 @@ import java.util.List;
 public interface PaymentRepository extends JpaRepository<Payment, Long> {
 
     // Trouver les paiements par réservation
-    List<Payment> findByReservationId(Long reservationId);
+    List<Payment> findByRentalId(Long rentalId);
 
     // Trouver les paiements par client
     List<Payment> findByClientId(Long clientId);
