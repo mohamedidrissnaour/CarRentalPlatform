@@ -26,38 +26,38 @@ public class RentalService {
     private final CarRestClient carRestClient;
     private final ClientRestClient clientRestClient;
 
-    public List<Rental> getAllReservations() {
+    public List<Rental> getAllRentals() {
         return rentalRepository.findAll();
     }
 
-    public Optional<Rental> getReservationById(Long id) {
+    public Optional<Rental> getRentalById(Long id) {
         return rentalRepository.findById(id);
     }
 
-    public List<Rental> getReservationsByClientId(Long clientId) {
+    public List<Rental> getRentalsByClientId(Long clientId) {
         return rentalRepository.findByClientId(clientId);
     }
 
-    public List<Rental> getReservationsByCarId(Long carId) {
+    public List<Rental> getRentalByCarId(Long carId) {
         return rentalRepository.findByCarId(carId);
     }
 
-    public List<Rental> getReservationsByStatut(StatutReservation statut) {
+    public List<Rental> getRentalsByStatut(StatutReservation statut) {
         return rentalRepository.findByStatut(statut);
     }
 
-    public List<Rental> getReservationsBetweenDates(LocalDate startDate, LocalDate endDate) {
-        return rentalRepository.findReservationsBetweenDates(startDate, endDate);
+    public List<Rental> getRentalsBetweenDates(LocalDate startDate, LocalDate endDate) {
+        return rentalRepository.findRentalsBetweenDates(startDate, endDate);
     }
 
-    public List<Rental> getActiveReservations() {
-        return rentalRepository.findActiveReservations(LocalDate.now());
+    public List<Rental> getActiveRentals() {
+        return rentalRepository.findActiveRentals(LocalDate.now());
     }
 
 
     @Transactional //@Transactional est une annotation de Spring (ou JPA)
     // qui sert à gérer les transactions sur la base de données , en cas dechoue ROllback.
-    public Rental createReservation(Rental rental) {
+    public Rental createRental(Rental rental) {
         log.info("Création d'une réservation pour le client {} et la voiture {}",
                 rental.getClientId(), rental.getCarId());
 
@@ -79,7 +79,7 @@ public class RentalService {
         log.info("Montant calculé: {} EUR pour {} jour(s)", rental.getMontantTotal(), nombreJours);
 
         // 5. Sauvegarder la réservation
-        Rental savedReservation = rentalRepository.save(rental);
+        Rental savedrental = rentalRepository.save(rental);
 
         // 6. Marquer la voiture comme non disponible
         try {
@@ -89,12 +89,12 @@ public class RentalService {
             log.error("Erreur lors de la mise à jour de la disponibilité: {}", e.getMessage());
         }
 
-        return savedReservation;
+        return savedrental;
 
         }
 
     @Transactional
-    public Rental updateReservationStatut(Long id, StatutReservation statut) {
+    public Rental updateRentalStatut(Long id, StatutReservation statut) {
         Rental reservation = rentalRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("Réservation non trouvée avec l'ID: " + id));
 
@@ -134,7 +134,7 @@ public class RentalService {
 
 
     public boolean isCarAvailable(Long carId, LocalDate dateDebut, LocalDate dateFin) {
-        List<Rental> conflits = rentalRepository.findConflictingReservations(
+        List<Rental> conflits = rentalRepository.findConflictingRentals(
                 carId, dateDebut, dateFin
         );
         return conflits.isEmpty();
@@ -154,10 +154,12 @@ public class RentalService {
                 .clientNom(client.getNom())
                 .clientPrenom(client.getPrenom())
                 .carId(rental.getCarId())
-                .carMarque(car.getMarque())
-                .carModele(car.getModele())
-                .dateDebut(rental.getStartDate())
-                .dateFin(rental.getEndDate())
+                .carMarque(car.getBrand() != null ? car.getBrand() : (car.getMarque() != null ? car.getMarque() : ""))
+                .carModele(car.getModel() != null ? car.getModel() : (car.getModele() != null ? car.getModele() : ""))
+                .startDate(rental.getStartDate())
+                .endDate(rental.getEndDate())
+                .dateDebut(rental.getStartDate())  // Pour compatibilité
+                .dateFin(rental.getEndDate())       // Pour compatibilité
                 .nombreJours(rental.getNombreJours())
                 .montantTotal(rental.getMontantTotal())
                 .statut(rental.getStatut())

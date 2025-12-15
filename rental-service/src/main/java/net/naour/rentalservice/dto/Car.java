@@ -9,8 +9,10 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class Car {
     private Long id;
-    private String marque;
-    private String modele;
+    private String brand;  // Utiliser brand au lieu de marque pour correspondre à l'entité
+    private String model;   // Utiliser model au lieu de modele pour correspondre à l'entité
+    private String marque;  // Garder pour compatibilité
+    private String modele;  // Garder pour compatibilité
     private String immatriculation;
     private String categorie;
     private int year;

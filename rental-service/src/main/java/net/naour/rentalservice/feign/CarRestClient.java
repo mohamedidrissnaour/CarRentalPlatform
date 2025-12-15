@@ -12,19 +12,19 @@ import java.util.List;
 public interface CarRestClient {
 
 
-    @GetMapping("/api/cars/{id}")
+    @GetMapping("/cars/{id}")
     Car getCarById(@PathVariable("id") Long id);
 
-    @PutMapping("/api/cars/{id}")
+    @PutMapping("/cars/{id}")
     ResponseEntity<Car> updateCar(@PathVariable Long id, @RequestBody Car car);
 
-    @GetMapping("/api/cars")
+    @GetMapping("/cars")
     PagedModel<Car> getAllCars();
 
-    @GetMapping("/api/cars/available")
+    @GetMapping("/cars/available")
     List<Car> getAvailableCars();
 
-    @PatchMapping("/api/cars/{id}/availability")
+    @PatchMapping("/cars/{id}/availability")
     Car updateAvailability(@PathVariable("id") Long id, @RequestParam("disponible") boolean disponible);
 //PagedModel<T> est une classe fournie par Spring HATEOAS
 // pour représenter une collection paginée avec des métadonnées :

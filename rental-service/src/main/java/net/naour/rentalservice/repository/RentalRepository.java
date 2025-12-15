@@ -27,7 +27,7 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
     @Query("SELECT r FROM Rental r WHERE r.carId = :carId " +
             "AND r.statut IN ('EN_ATTENTE', 'CONFIRMEE', 'EN_COURS') " +
             "AND ((r.startDate <= :dateFin AND r.endDate >= :dateDebut))")
-    List<Rental> findConflictingReservations(
+    List<Rental> findConflictingRentals(
             @Param("carId") Long carId,
             @Param("dateDebut") LocalDate startDate,
             @Param("dateFin") LocalDate endDate
@@ -35,7 +35,7 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
 
     // Trouver les réservations entre deux dates
     @Query("SELECT r FROM Rental r WHERE r.startDate >= :startDate AND r.endDate <= :endDate")
-    List<Rental> findReservationsBetweenDates(
+    List<Rental> findRentalsBetweenDates(
             @Param("startDate") LocalDate startDate,
             @Param("endDate") LocalDate endDate
     );
@@ -43,6 +43,6 @@ public interface RentalRepository extends JpaRepository<Rental, Long> {
     // Trouver les réservations actives
     @Query("SELECT r FROM Rental r WHERE r.statut IN ('CONFIRMEE', 'EN_COURS') " +
             "AND r.startDate <= :today AND r.endDate >= :today")
-    List<Rental> findActiveReservations(@Param("today") LocalDate today);
+    List<Rental> findActiveRentals(@Param("today") LocalDate today);
 }
 

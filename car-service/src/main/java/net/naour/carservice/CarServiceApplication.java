@@ -36,6 +36,7 @@ public class CarServiceApplication {
                                 .immatriculation(1000000 + random.nextInt(9000000)) // entre 1000000 et 9999999
                                 .year(2000 + random.nextInt(24)) // random year 2000-2023
                                 .pricePerDay(50 + random.nextDouble() * 150) // prix entre 50 et 200
+                                .disponible(true)
                                 .build();
 
                         carRepository.save(car);

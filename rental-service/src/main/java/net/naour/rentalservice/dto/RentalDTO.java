@@ -21,8 +21,10 @@ public class RentalDTO {
     private Long carId;
     private String carMarque;
     private String carModele;
-    private LocalDate dateDebut;
-    private LocalDate dateFin;
+    private LocalDate startDate;  // Utiliser startDate pour cohérence
+    private LocalDate endDate;    // Utiliser endDate pour cohérence
+    private LocalDate dateDebut;  // Garder pour compatibilité
+    private LocalDate dateFin;    // Garder pour compatibilité
     private long nombreJours;
     private double montantTotal;
     private StatutReservation statut;

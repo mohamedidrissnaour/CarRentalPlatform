@@ -17,73 +17,73 @@ import java.time.LocalDate;
 import java.util.List;
 
 @RestController
-@RequestMapping("/api/reservations")
+@RequestMapping("/rentals")
 @RequiredArgsConstructor
 @CrossOrigin(origins = "*")
 public class RentalController {
     private final RentalService rentalService;
 
     @GetMapping
-    public List<Rental> getAllReservations() {
-        return rentalService.getAllReservations();
+    public List<Rental> getAllRentals() {
+        return rentalService.getAllRentals();
     }
 
     @GetMapping("/details")
-    public List<RentalDTO> getAllReservationsWithDetails() {
+    public List<RentalDTO> getAllRentalsWithDetails() {
         return rentalService.getAllReservationsWithDetails();
     }
 
     @GetMapping("/{id}")
-    public Rental getReservationById(@PathVariable Long id) {
-        return rentalService.getReservationById(id).orElseThrow();
+    public Rental getRentalById(@PathVariable Long id) {
+        return rentalService.getRentalById(id).orElseThrow();
     }
 
     @GetMapping("/{id}/details")
-    public RentalDTO getReservationDetails(@PathVariable Long id) {
+    public RentalDTO getRentalsDetails(@PathVariable Long id) {
         return rentalService.getReservationDetails(id);
     }
 
     @GetMapping("/client/{clientId}")
-    public List<Rental> getReservationsByClient(@PathVariable Long clientId) {
-        return rentalService.getReservationsByClientId(clientId);
+    public List<Rental> getRentalByClient(@PathVariable Long clientId) {
+        return rentalService.getRentalsByClientId(clientId);
     }
 
     @GetMapping("/car/{carId}")
-    public List<Rental> getReservationsByCar(@PathVariable Long carId) {
-        return rentalService.getReservationsByCarId(carId);
+    public List<Rental> getRentalsByCar(@PathVariable Long carId) {
+        return rentalService.getRentalByCarId(carId);
     }
 
     @GetMapping("/statut/{statut}")
-    public List<Rental> getReservationsByStatut(@PathVariable StatutReservation statut) {
-        return rentalService.getReservationsByStatut(statut);
+    public List<Rental> getRentalsByStatut(@PathVariable StatutReservation statut) {
+        return rentalService.getRentalsByStatut(statut);
     }
 
     @GetMapping("/active")
-    public List<Rental> getActiveReservations() {
-        return rentalService.getActiveReservations();
+    public List<Rental> getActiveRentals() {
+        return rentalService.getActiveRentals();
     }
 
     @GetMapping("/period")
-    public List<Rental> getReservationsByPeriod(
+    public List<Rental> getRentalsByPeriod(
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
             //ISO.DATE correspond au format yyyy-MM-dd
             @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
-        return rentalService.getReservationsBetweenDates(startDate, endDate);
+        return rentalService.getRentalsBetweenDates(startDate, endDate);
     }
 
     @PostMapping
-    public Rental createReservation(@RequestBody Rental rental) {
-        return rentalService.createReservation(rental);
+    public Rental createRental(@RequestBody Rental rental) {
+        return rentalService.createRental(rental);
 
     }
 
     @PatchMapping("/{id}/statut")
     public Rental updateStatut (@PathVariable Long id, @RequestParam StatutReservation statut) {
-        return rentalService.updateReservationStatut(id, statut);
+        return rentalService.updateRentalStatut(id, statut);
     }
 
     @DeleteMapping("/{id}")
-    public void deleteReservation(@PathVariable Long id) {
+    public void deleteRental(@PathVariable Long id) {
           rentalService.deleteReservation(id);
 
     }
@@ -91,9 +91,14 @@ public class RentalController {
     @GetMapping("/check-availability")
     public boolean checkAvailability(
             @RequestParam Long carId,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateDebut,
-            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFin) {
-        return rentalService.isCarAvailable(carId, dateDebut, dateFin);
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateDebut,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate dateFin,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate startDate,
+            @RequestParam(required = false) @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate endDate) {
+        // Support both old (dateDebut/dateFin) and new (startDate/endDate) parameter names
+        LocalDate start = startDate != null ? startDate : dateDebut;
+        LocalDate end = endDate != null ? endDate : dateFin;
+        return rentalService.isCarAvailable(carId, start, end);
 
     }
 }
